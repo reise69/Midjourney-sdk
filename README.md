@@ -1,5 +1,10 @@
 # Midjourney Python SDK
 
+[![PyPI version](https://badge.fury.io/py/midjourney-sdk-py.svg)](https://badge.fury.io/py/midjourney-sdk-py)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/pypi/pyversions/midjourney-sdk-py.svg)](https://pypi.org/project/midjourney-sdk-py/)
+
+
 The Midjourney Python SDK is a powerful and easy-to-use library that allows you to interact with the Midjourney AI image generation platform directly from your Python code. With this SDK, you can generate stunning images, upscale them, and customize the generation process using various parameters and options.
 
 ![How use it the Midjourney SDK](https://www.refbax.com/wp-content/uploads/2024/05/exemple-midjourney.gif)
@@ -39,7 +44,7 @@ Once you have the discord_channel_id and discord_user_token, you can start using
 Here's a basic example of how to generate an image using the SDK:
     
 ```python
-from midjourney_sdk import Midjourney
+from midjourney_sdk_py import Midjourney
 
 discord_channel_id = "YOUR_DISCORD_CHANNEL_ID"
 discord_user_token = "YOUR_DISCORD_USER_TOKEN"
@@ -73,7 +78,7 @@ The get_parameter_from_prompt method allows you to extract parameters and source
 Here's an example of how to use get_parameter_from_prompt:
 
 ```python
-from midjourney_sdk import Midjourney
+from midjourney_sdk_py import Midjourney
 
 discord_channel_id = "YOUR_DISCORD_CHANNEL_ID"
 discord_user_token = "YOUR_DISCORD_USER_TOKEN"
