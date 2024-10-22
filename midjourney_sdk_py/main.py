@@ -3,6 +3,11 @@ import time
 import json, random
 import re
 from pprint import pprint as pp
+import uuid
+from datetime import datetime
+from PIL import Image
+import os
+from slugify import slugify
 
 
 class Midjourney:
@@ -10,12 +15,13 @@ class Midjourney:
     APPLICATION_ID = '936929561302675456'
     DATA_ID = '938956540159881230'
     DATA_VERSION = '1237876415471554623'
-    SESSION_ID = '379ca7f876ef1793f578d52eb4e5d735'
+    
 
-    def __init__(self, channel_id, oauth_token):
+    def __init__(self, channel_id, oauth_token, session_id):
         self.channel_id = channel_id
         self.oauth_token = oauth_token
-
+        self.session_id = session_id
+        
         self.client = requests.Session()
         self.client.headers.update({
             'Authorization': oauth_token
@@ -23,7 +29,9 @@ class Midjourney:
 
         response = self.client.get(f'{self.API_URL}/channels/{self.channel_id}')
         data = response.json()
-
+        if 'guild_id' not in data:
+            raise Exception('Channel not found, token value or session value are not valid. Please check your token and channel id.')
+        
         self.guild_id = data['guild_id']
 
         response = self.client.get(f'{self.API_URL}/users/@me')
@@ -46,7 +54,7 @@ class Midjourney:
             'application_id': self.APPLICATION_ID,
             'guild_id': self.guild_id,
             'channel_id': self.channel_id,
-            'session_id': self.SESSION_ID,
+            'session_id': self.session_id,
             'data': {
                 'version': self.DATA_VERSION,
                 'id': self.DATA_ID,
@@ -172,7 +180,7 @@ class Midjourney:
             'message_flags': 0,
             'message_id': message['id'],
             'application_id': self.APPLICATION_ID,
-            'session_id': self.SESSION_ID,
+            'session_id': self.session_id,
             'data': {
                 'component_type': 2,
                 'custom_id': upscale_hash
@@ -254,7 +262,7 @@ class Midjourney:
 
         # Force options version to 6.0
         if "v" not in options or options['v'] == "":
-            options['v'] = '6.0'
+            options['v'] = '6.1'
 
         if "ar" not in options or options['ar'] == "":
             options['ar'] = '3:2'
@@ -334,14 +342,62 @@ class Midjourney:
         return {parameter.split(' ')[0].replace('--', ''): parameter.split(' ')[1] for parameter in
                 parameters}, sources, prompt
 
+    
+    def download_and_convert_image(self, image_url, image_name=None, save_path=None, compression=0.9, size=None, crop=False):
+        try:
+            response = self.client.get(image_url)
+            response.raise_for_status()
+
+            if image_name is None:
+                image_name = f"{uuid.uuid4()}-{datetime.now().strftime('%d-%m-%Y')}"
+            
+            image_name = slugify(image_name)
+
+            if save_path is None:
+                save_path = os.getcwd()
+            
+            temp_png_path = os.path.join(save_path, f"{image_name}.png")
+
+            with open(temp_png_path, 'wb') as f:
+                f.write(response.content)
+
+            with Image.open(temp_png_path) as img:
+                if size is not None:
+                    if crop:
+                        target_ratio = size[0] / size[1]
+                        
+                        if img.width / img.height > target_ratio:
+                            new_width = int(img.height * target_ratio)
+                            offset = (img.width - new_width) // 2
+                            img = img.crop((offset, 0, offset + new_width, img.height))
+                        else:
+                            new_height = int(img.width / target_ratio)
+                            offset = (img.height - new_height) // 2
+                            img = img.crop((0, offset, img.width, offset + new_height))
+                    
+                    
+                    img = img.resize(size, Image.LANCZOS)
+                
+
+                jpg_path = os.path.join(save_path, f"{image_name}.jpg")
+
+                img.convert("RGB").save(jpg_path, "JPEG", quality=int(compression * 100))
+
+            os.remove(temp_png_path)
+
+            return jpg_path
+        except Exception as e:
+            print(f"Error during image processing: {str(e)}")
+            return False
 
 if __name__ == "__main__":
-    discord_channel_id = "XXXXXxXxXxxXxXx"
-    discord_user_token = "XXxXxXXXxXXXXXXXxxxxxxxxxXXXxXxXXX"
+    discord_channel_id = "XxxXxxXXxXxXx"
+    discord_user_token = "XXXXXXxxXXXxXxxxxXxXXXXxXX"
+    discord_session_id = "XxxXxxXXxXxXx"
+    
+    midjourney = Midjourney(discord_channel_id, discord_user_token, discord_session_id)
 
-    midjourney = Midjourney(discord_channel_id, discord_user_token)
-
-    prompt = "An illustration of A teddy bear in scotland, french flag in the hand, scotland landscape, comics --ar 3:2 --v 6.0 --turbo"
+    prompt = "An illustration of A teddy bear in scotland, french flag in the hand, scotland landscape, comics, inspired by Ted movie --ar 3:2 --v 6.1 --fast"
     options, sources, prompt = midjourney.get_parameter_from_prompt(prompt)
 
     print(prompt)
@@ -349,5 +405,10 @@ if __name__ == "__main__":
     print(sources)
 
     message = midjourney.generate(prompt, options, sources)
-
+    
+    # Display selected image url
     print(message['upscaled_photo_url'])
+
+    # Download and convert image to jpg on your computer
+    download_path = "downloads"
+    midjourney.download_and_convert_image(message['upscaled_photo_url'], "A Teddy bear in scotland", download_path, 0.9, (500, 500), True)

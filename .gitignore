@@ -1,0 +1,6 @@
+dist/
+build/
+.idea
+.venv
+help_pip_publication.md
+midjourney_sdk_py.egg-info
